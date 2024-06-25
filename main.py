@@ -1,17 +1,22 @@
 import json
 import pandas as pd
 import sys
+import logging
 from data_loading import load_data
 from credit_analysis import analyze_personal_credit, analyze_business_credit
 from recommendations import recommend_personal_tradelines, recommend_business_tradelines, recommend_au_accounts, generate_recommendation_grid
 from report_generation import generate_report
 
+logging.basicConfig(level=logging.INFO)
+
 def main(client_name, company_name, user_name, date):
+    logging.info('Loading profiles...')
     with open('personal_profile.json', 'r') as f:
         personal_profile = json.load(f)
     with open('business_profile.json', 'r') as f:
         business_profile = json.load(f)
 
+    logging.info('Loading data...')
     business_tradelines, consumer_tradelines, au_inventory, business_loan_approval_data, personal_loan_approval_data = load_data()
 
     personal_credit_targets = {
@@ -33,9 +38,12 @@ def main(client_name, company_name, user_name, date):
         "public_records": "No public records"
     }
 
+    logging.info('Analyzing personal credit...')
     analyze_personal_credit(personal_profile, personal_credit_targets)
+    logging.info('Analyzing business credit...')
     analyze_business_credit(business_profile, business_credit_targets)
 
+    logging.info('Generating recommendations...')
     good_recommendations = recommend_personal_tradelines(personal_profile, consumer_tradelines)
     better_recommendations = recommend_business_tradelines(business_profile, business_tradelines)
     best_recommendations, new_utilization, new_credit_score, new_funding_capacity = recommend_au_accounts(personal_profile, au_inventory, 5)
@@ -47,10 +55,11 @@ def main(client_name, company_name, user_name, date):
     funding_capacity_personal = 0  # Calculate based on personal_score and targets
     funding_capacity_business = 0  # Calculate based on business_score and targets
 
+    logging.info('Generating report...')
     generate_report(client_name, company_name, user_name, date, personal_profile, business_profile, good_df, better_df, best_df, funding_capacity_personal, funding_capacity_business)
 
 if __name__ == "__main__":
     if len(sys.argv) != 5:
-        print("Usage: python main.py <client_name> <company_name> <user_name> <date>")
+        logging.error("Usage: python main.py <client_name> <company_name> <user_name> <date>")
     else:
         main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
